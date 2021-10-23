@@ -6,6 +6,7 @@ scalacOptions := Seq("-deprecation", "-unchecked", "-encoding", "utf8", "-Xlint"
 
 val sparkVersion = "2.4.8"
 val scalaTestVersion = "3.2.10"
+val sprayJsonVersion = "1.3.6"
 
 unmanagedSources / excludeFilter := (HiddenFileFilter || "*-script.scala")
 Compile / unmanagedResourceDirectories   += baseDirectory.value / "conf"
@@ -20,20 +21,18 @@ libraryDependencies ++= Seq(
   "org.apache.spark"  %% "spark-repl"      % sparkVersion,
 
   "org.scalatest"     %% "scalatest"       % scalaTestVersion  % "test",
+  "io.spray" %%  "spray-json" % sprayJsonVersion,
+
 )
 
 initialCommands += """
   import org.apache.spark.sql.SparkSession
-  import org.apache.spark.SparkContext
+
   val spark = SparkSession.builder.
     master("local[*]").
     appName("Console").
     config("spark.app.id", "Console").   // To silence Metrics warning.
     getOrCreate()
-  val sc = spark.sparkContext
-  val sqlContext = spark.sqlContext
-  import sqlContext.implicits._
-  import org.apache.spark.sql.functions._    // for min, max, etc.
   """
 
 cleanupCommands += """

@@ -1,6 +1,7 @@
 import utils.{FileOperation, CommandLineOptions, DataUtil}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.rdd.RDD
+import spray.json._
 
 object Recommendation {
   def main(args: Array[String]): Unit = {
@@ -9,7 +10,7 @@ object Recommendation {
     val options: CommandLineOptions = CommandLineOptions(
       this.getClass.getSimpleName,
       CommandLineOptions.inputPath("data/products.json"),
-      CommandLineOptions.outputPath("output/recom"),
+      CommandLineOptions.outputPath("output"),
       CommandLineOptions.productSKU(""),
       CommandLineOptions.quiet
     )
@@ -46,8 +47,11 @@ object Recommendation {
     // import sqlContext.implicits._
 
     try {
+      // verify input file exists
+      FileOperation.verify(dataPath)
       // remove previous output
       FileOperation.rmrf(out)
+      FileOperation.mkdir(out)
 
       // read in the data
       val data: DataFrame = spark.read.json(dataPath)
@@ -88,8 +92,23 @@ object Recommendation {
           sku != productSKU
         } // not recommending the product itself
 
-      if (!quiet) println(s"Writing output to: $out")
-      products.saveAsTextFile(out)
+      case class Recom(sku: String, score: Double, rank: Int)
+      object RecomFormatter extends DefaultJsonProtocol {
+        implicit val recomFormat = jsonFormat3(Recom.apply)
+      }
+      import RecomFormatter._
+      val recomList = new Array[String](10)
+      var i: Int = 0
+      products.take(10).foreach { case (sku, score) =>
+        recomList(i) = Recom(sku, score, i + 1).toJson.compactPrint
+        i += 1
+      }
+
+      // write out the recommendations
+      if (!quiet) recomList.foreach(println)
+      if (!quiet) println(s"Writing output to: $out/recommendations.json")
+
+      FileOperation.write(out, "recommendations.json", recomList)
 
     } finally {
       spark.stop()
