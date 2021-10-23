@@ -1,11 +1,7 @@
 package utils
 import java.io._
-import scala.io.Source
 
-/**
- * Miscellaneous file utilities.
- * They only work for the local file system, not Hadoop.
- */
+
 object FileOperation {
 
   case class FileOperationError(msg: String) extends RuntimeException(msg)

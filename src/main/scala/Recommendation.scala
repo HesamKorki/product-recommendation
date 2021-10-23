@@ -1,67 +1,98 @@
-import utils.FileOperation
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import utils.{FileOperation, CommandLineOptions, DataUtil}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.rdd.RDD
 
-
-
 object Recommendation {
-    def main(args: Array[String]): Unit = {
-        
-        val spark = SparkSession.builder.
-            master("local[*]").
-            appName("Recommendation").
-            config("spark.app.id", "Recommendation").
-            getOrCreate()
+  def main(args: Array[String]): Unit = {
 
-        val sc = spark.sparkContext
-        val sqlContext = spark.sqlContext
-        import sqlContext.implicits._
+    // Parse command line arguments
+    val options: CommandLineOptions = CommandLineOptions(
+      this.getClass.getSimpleName,
+      CommandLineOptions.inputPath("data/products.json"),
+      CommandLineOptions.outputPath("output/recom"),
+      CommandLineOptions.productSKU(""),
+      CommandLineOptions.quiet
+    )
+    val argz: Map[String, String] = options(args.toList)
+    val out: String = argz("output-path")
+    val dataPath: String = argz("input-path")
+    val quiet: Boolean = argz("quiet").toBoolean
+    val productSKU: String = argz("product-sku")
 
-        
-        try {
-            val out : String = "output/sku-recom1"
-            FileOperation.rmrf(out)
-
-            val input : String = "sku-123"
-            val data : DataFrame = spark.read.json("data/products.json")
-            data.createOrReplaceTempView("products")
-            val inQuery : DataFrame = spark.sql(s"select * from products where sku='$input'")
-
-            def parseRow(product: Row): (String, Array[Int]) = {
-                val atts = product.getStruct(0)
-                var attValues = new Array[Int](atts.length)
-                for (i <- 0 to atts.length -1){
-                    attValues(i) = atts.getString(i).split("-")(2).toInt
-                }
-                //val Array(a,b,c,d,e,f,g,h,i,j) = attValues
-                (product.getString(1), attValues)
-            }
-            val inProduct = inQuery.rdd.map(parseRow).collect()(0)
-            val parsedProducts = data.rdd.map(parseRow)
-            val productsRelative = parsedProducts.map{case (sku, attValues) =>
-                val (inSKU, inAttValues) = inProduct 
-                (sku, (attValues, inAttValues).zipped.map(_-_))
-                
-            }
-            val products = productsRelative.map{case (sku, values) => 
-                var score : Double = 0.0
-                for (i <- 0 to values.length -1) {
-                    if (values(i) == 0) {
-                        score += 1 + 1/(i+10).toDouble
-                    }
-                }
-                ((sku, score.toInt/10.0), score)
-            }.sortBy(_._2, false)
-            .map{case(pr, score) => pr}
-            .filter{case(sku, score) => sku != input}
-
-
-            println(s"Writing output to: $out")
-            products.saveAsTextFile(out)
-            
-
-        } finally {
-            spark.stop()
-        }
+    // validate the product sku for input
+    try {
+      val skuNum: Int =
+        productSKU.split("-")(1).toInt // throws NumberFormatException
+      if (productSKU.split("-")(0) != "sku" || skuNum < 0 || skuNum > 20000) {
+        throw new IllegalArgumentException()
+      }
+    } catch {
+      case e: Exception => {
+        throw new IllegalArgumentException("""
+                Bad argument for product-sku (-p).
+                run sbt "runMain Recommendation --help" for more information""")
+      }
     }
+
+    val spark = SparkSession.builder
+      .master("local[*]")
+      .appName("Recommendation")
+      .config("spark.app.id", "Recommendation")
+      .config("spark.driver.host", "localhost")
+      .getOrCreate()
+
+    // val sc = spark.sparkContext
+    // val sqlContext = spark.sqlContext
+    // import sqlContext.implicits._
+
+    try {
+      // remove previous output
+      FileOperation.rmrf(out)
+
+      // read in the data
+      val data: DataFrame = spark.read.json(dataPath)
+
+      // collect the input product to create recommendations for
+      data.createOrReplaceTempView("products")
+      val inQuery: DataFrame =
+        spark.sql(s"select * from products where sku='$productSKU'")
+      val inProduct: (String, Array[Int]) =
+        inQuery.rdd.map(DataUtil.parseRow).collect()(0)
+
+      // parse the data into a more usable form,
+      // and save attribute differences from the input product
+      val parsedProducts: RDD[(String, Array[Int])] =
+        data.rdd.map(DataUtil.parseRow)
+      val productsRelative: RDD[(String, Array[Int])] = parsedProducts.map {
+        case (sku, attValues) =>
+          val (inSKU, inAttValues) = inProduct
+          (sku, (attValues, inAttValues).zipped.map(_ - _))
+
+      }
+
+      // score products by counting zeros in attribute differences
+      val products: RDD[(String, Double)] = productsRelative
+        .map { case (sku, values) =>
+          var score: Double = 0.0
+          for (i <- 0 to values.length - 1) {
+            if (values(i) == 0) {
+              // add 1/10+i to acount for alphabetic ordering value
+              score += 1 + 1 / (i + 10).toDouble
+            }
+          }
+          ((sku, score.toInt / 10.0), score)
+        }
+        .sortBy(_._2, false) // sort by weighted score
+        .map { case (pr, score) => pr } // keep original scores
+        .filter { case (sku, score) =>
+          sku != productSKU
+        } // not recommending the product itself
+
+      if (!quiet) println(s"Writing output to: $out")
+      products.saveAsTextFile(out)
+
+    } finally {
+      spark.stop()
+    }
+  }
 }
