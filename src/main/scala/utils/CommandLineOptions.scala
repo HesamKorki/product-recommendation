@@ -96,7 +96,7 @@ object CommandLineOptions {
     name = "output-path",
     value = value,
     help =
-      s"-o | --out | --outpath path   The output to which the output will be written (default: $value)",
+      s"-o | --out | --outpath path   The directory to which the output will be written (default: $value)",
     parser = { case ("-o" | "--out" | "--outpath") +: path +: tail =>
       (("output-path", path), tail)
     }

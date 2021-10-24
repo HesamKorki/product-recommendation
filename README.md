@@ -17,8 +17,9 @@ The **key criteria** for similarity between products is the number of attributes
 {"sku":"sku-2","attributes":{"att-a": "a1", "att-b": "b2"}} than to (W=0.5)
 {"sku":"sku-3","attributes":{"att-a": "a2", "att-b": "b1"}}         (W=0.5)
 ```
+The expected format of the output is similar to the input and can be found in _"expected/recommendations.json"_. This file is also used as a test case.
 
-# How to Run
+## How to Run
 Make sure you have [*sbt*](https://www.scala-sbt.org/1.x/docs/Setup.html) installed. Navigate to the root of the project (you should see a *build.sbt* in the directory). Then, to run the program:
 ```bash
 $ sbt "runMain Recommendation -p sku-1234"
@@ -27,5 +28,24 @@ This command will read the data from _"data/products.json"_, and run the recomme
 ```bash
 $ sbt "runMain Recommendation --help"
 ```
-## Possible Further Improvements
+```
+ usage: $ sbt "runMain Recommendation [options]"
+        where the options are the following:
+        -h | --help  Show this message and quit.
+        -i | --in  | --inpath  path   The input file path (default: data/products.json)
+        -o | --out | --outpath path   The directory to which the output will be written (default: output)
+        -p | --product SKU   The SKU of the product that the app makes recommendations for.
+                            "SKU" could be one of:
+                            ("sku-1", "sku-2", ... ,"sku-19999", "sku-20000").
+        -q | --quiet         Suppress some informational output.
+```
+## Tests
+This project uses the **scalatest** library to test the program. The chosen style of test is the FunSuite. I have tried to test different edge cases regarding I/O and recommendations results.
+To run the tests simply run:
+```bash
+$ sbt test
+```
+### Possible Further Improvements
  - Add caching for results 
+ - Better test cases
+ - Wrapping a REST/gRPC API around the engine 

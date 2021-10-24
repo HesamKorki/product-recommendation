@@ -50,6 +50,7 @@ object Recommendation {
       // verify input file exists
       FileOperation.verify(dataPath)
       // remove previous output
+      FileOperation.verify_dir(out)
       FileOperation.rmrf(out)
       FileOperation.mkdir(out)
 

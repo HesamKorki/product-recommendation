@@ -14,6 +14,7 @@ Test / unmanagedResourceDirectories += baseDirectory.value / "conf"
 fork := true
 run / connectInput := true
 Test / parallelExecution := false
+Test / logBuffered := false
 
 libraryDependencies ++= Seq(
   "org.apache.spark"  %% "spark-core"      % sparkVersion,
