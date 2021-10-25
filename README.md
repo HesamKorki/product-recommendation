@@ -17,7 +17,7 @@ The **key criteria** for similarity between products is the number of attributes
 {"sku":"sku-2","attributes":{"att-a": "a1", "att-b": "b2"}} than to (W=0.5)
 {"sku":"sku-3","attributes":{"att-a": "a2", "att-b": "b1"}}         (W=0.5)
 ```
-The expected format of the output is similar to the input and can be found in _"expected/recommendations.json"_. This file is also used as a test case.
+The expected format of the output is similar to the input and can be found in _"expected/sku-1234Result.json"_. This file is also used as a test case.
 
 ## How to Run
 Make sure you have [*sbt*](https://www.scala-sbt.org/1.x/docs/Setup.html) installed. Navigate to the root of the project (you should see a *build.sbt* in the directory). Then, to run the program:
@@ -41,11 +41,18 @@ $ sbt "runMain Recommendation --help"
 ```
 ## Tests
 This project uses the **scalatest** library to test the program. The chosen style of test is the FunSuite. I have tried to test different edge cases regarding I/O and recommendations results.
-To run the tests simply run:
+To run the tests, simply run:
 ```bash
 $ sbt test
 ```
+The last two test cases are extended from the examples above, and their respective expected results can be found in the _"expected"_ directory. Also, their data is available in _"data/test"_ directory.
+
+## How It Works
+The code is annotated for ease of reading and understanding the solution. However, the main idea is to create a 1-D vector of attributes numbers for each product, and then subtract them by the vector of the desired input product's vector. Finally, the number of zeros added by a fraction to account for the alphabetic ordering value would do the trick.
+
+The program should do fine with other data files as long as the data is in the same schema and format as the original input data. The last two cases can vouch for that.
 ### Possible Further Improvements
  - Add caching for results 
- - Better test cases
+ - Creating a 2D sparse matrix of the attributes with index and caching that in memory instead of loading the data every time
+ - More test cases with improvements
  - Wrapping a REST/gRPC API around the engine 

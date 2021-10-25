@@ -52,10 +52,28 @@ class RecommendationSuite extends AnyFunSuite {
   test(
     "providing a particular sku should generate an output that is identical to the expected result"
   ) {
-    val expected = "expected/recommendations.json"
+    val expected = "expected/sku-1234Result.json"
     Recommendation.main(Array("-p", "sku-1234"))
     val actual = "output/recommendations.json"
     TestUtil.verifyAndClean(actual, expected, "output")
+  }
+  test(
+    "The recommendations for the testData1 should be identical to the expected file for sku-1"
+  ) {
+    val expected = "expected/testResult1.json"
+    Recommendation.main(Array("-i", "data/test/testData1.json", "-p", "sku-1"))
+    val actual = "output/recommendations.json"
+    TestUtil.verifyAndClean(actual, expected, "output")
+
+  }
+  test(
+    "The recommendations for the testData2 should be identical to the expected file for sku-1"
+  ) {
+    val expected = "expected/testResult2.json"
+    Recommendation.main(Array("-i", "data/test/testData2.json", "-p", "sku-1"))
+    val actual = "output/recommendations.json"
+    TestUtil.verifyAndClean(actual, expected, "output")
+
   }
 
 }

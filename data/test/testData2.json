@@ -1,0 +1,4 @@
+{"sku":"sku-1","attributes":{"att-a": "att-a-1", "att-b": "att-b-1"}}
+{"sku":"sku-2","attributes":{"att-a": "att-a-1", "att-b": "att-b-2"}}
+{"sku":"sku-3","attributes":{"att-a": "att-a-2", "att-b": "att-b-1"}}
+{"sku":"sku-4","attributes":{"att-a": "att-a-4", "att-b": "att-b-4"}}

@@ -55,7 +55,9 @@ object FileOperation {
     val outPath = Paths.get(path, fname).toString
     val file = new File(outPath)
     val writer = new BufferedWriter(new FileWriter(file))
-    for (line <- data) writer.write(line + "\n")
+    for (line <- data) {
+      if (line != null) writer.write(line + "\n")
+    }
     writer.close()
 
   }

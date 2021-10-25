@@ -20,31 +20,12 @@ object Recommendation {
     val quiet: Boolean = argz("quiet").toBoolean
     val productSKU: String = argz("product-sku")
 
-    // validate the product sku for input
-    try {
-      val skuNum: Int =
-        productSKU.split("-")(1).toInt // throws NumberFormatException
-      if (productSKU.split("-")(0) != "sku" || skuNum < 0 || skuNum > 20000) {
-        throw new IllegalArgumentException()
-      }
-    } catch {
-      case e: Exception => {
-        throw new IllegalArgumentException("""
-                Bad argument for product-sku (-p).
-                run sbt "runMain Recommendation --help" for more information""")
-      }
-    }
-
     val spark = SparkSession.builder
       .master("local[*]")
       .appName("Recommendation")
       .config("spark.app.id", "Recommendation")
       .config("spark.driver.host", "localhost")
       .getOrCreate()
-
-    // val sc = spark.sparkContext
-    // val sqlContext = spark.sqlContext
-    // import sqlContext.implicits._
 
     try {
       // verify input file exists
@@ -61,8 +42,15 @@ object Recommendation {
       data.createOrReplaceTempView("products")
       val inQuery: DataFrame =
         spark.sql(s"select * from products where sku='$productSKU'")
+      if (inQuery.rdd.take(1).length == 0) {
+        throw new IllegalArgumentException("""
+                Bad argument for product-sku (-p).
+                run sbt "runMain Recommendation --help" for more information""")
+        sys.exit(1)
+      }
       val inProduct: (String, Array[Int]) =
         inQuery.rdd.map(DataUtil.parseRow).collect()(0)
+      val attributeNum = inProduct._2.length
 
       // parse the data into a more usable form,
       // and save attribute differences from the input product
@@ -79,13 +67,14 @@ object Recommendation {
       val products: RDD[(String, Double)] = productsRelative
         .map { case (sku, values) =>
           var score: Double = 0.0
-          for (i <- 0 to values.length - 1) {
+          for (i <- 0 to attributeNum - 1) {
             if (values(i) == 0) {
               // add 1/10+i to acount for alphabetic ordering value
-              score += 1 + 1 / (i + 10).toDouble
+              score += 1 + 1 / (i + attributeNum).toDouble
             }
           }
-          ((sku, score.toInt / 10.0), score)
+          val orgScore = DataUtil.roundAt2(score.toInt / attributeNum.toDouble)
+          ((sku, orgScore), score)
         }
         .sortBy(_._2, false) // sort by weighted score
         .map { case (pr, score) => pr } // keep original scores

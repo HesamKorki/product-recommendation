@@ -118,7 +118,8 @@ object CommandLineOptions {
     value = value,
     help = """
        |-p | --product SKU   The SKU of the product that the app makes recommendations for.
-       |                     "SKU" could be one of:
+       |                     The value should be in the input data as an sku for a product.
+       |                     For example with the given data, "SKU" could be one of:
        |                     ("sku-1", "sku-2", ... ,"sku-19999", "sku-20000").
        |                     """.stripMargin,
     parser = { case ("-p" | "--product") +: sku +: tail =>
